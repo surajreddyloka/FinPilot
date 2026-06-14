@@ -79,15 +79,15 @@ services:
       - key: DEBUG
         value: "false"
 
-# ── Databases ─────────────────────────────────────────────────────────────────
-database:
-  name: finpilot-postgres
-  databaseName: finpilot
-  user: postgres
-  plan: free
+  # ── Redis Service ───────────────────────────────────────────────────────────
+  - type: redis
+    name: finpilot-redis
+    plan: free
+    ipAllowList: []
 
-# ── Redis ─────────────────────────────────────────────────────────────────────
-redis:
-  name: finpilot-redis
-  plan: free
-  ipAllowList: []
+# ── Databases ─────────────────────────────────────────────────────────────────
+databases:
+  - name: finpilot-postgres
+    databaseName: finpilot
+    user: postgres
+    plan: free
