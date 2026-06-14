@@ -1,0 +1,14 @@
+"use client";
+
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
+export function GoogleAuthProvider({ children }: { children: React.ReactNode }) {
+  // Use a placeholder if the environment variable is missing
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+
+  return (
+    <GoogleOAuthProvider clientId={clientId}>
+      {children}
+    </GoogleOAuthProvider>
+  );
+}
