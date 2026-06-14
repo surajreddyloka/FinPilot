@@ -23,6 +23,7 @@ export default function TransactionsPage() {
     mutationFn: (data: any) => transactionsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions-summary"] });
       toast.success("Transaction added!");
       setIsAddModalOpen(false);
       setFormData({ ...formData, name: "", amount: "" });
@@ -31,14 +32,12 @@ export default function TransactionsPage() {
   });
 
   const handleExport = () => {
-    const csvContent = "Date,Transaction,Merchant,Category,Type,Amount
-" + 
+    const csvContent = "Date,Transaction,Merchant,Category,Type,Amount\n" + 
       filteredTransactions.map((t: any) => {
         const cat = CATEGORY_NAMES[t.category_id] || "Uncategorized";
         const date = format(new Date(t.transaction_date), "yyyy-MM-dd");
         return `"${date}","${t.name}","${t.merchant_name || ''}","${cat}","${t.transaction_type}",${t.amount}`;
-      }).join("
-");
+      }).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -52,7 +51,7 @@ export default function TransactionsPage() {
     if (!file) return;
     const promise = transactionsApi.upload(file);
     toast.promise(promise, { loading: 'Uploading...', success: 'Statement queued for processing!', error: 'Failed to upload' });
-    try { await promise; queryClient.invalidateQueries({ queryKey: ["transactions"] }); } catch {}
+    try { await promise; queryClient.invalidateQueries({ queryKey: ["transactions"] }); queryClient.invalidateQueries({ queryKey: ["transactions-summary"] }); } catch {}
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -71,12 +70,30 @@ export default function TransactionsPage() {
     initialData: MOCK_TRANSACTIONS,
   });
 
+  const { data: summaryData } = useQuery({
+    queryKey: ["transactions-summary"],
+    queryFn: () => {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      return transactionsApi.summary({ start_date: startOfMonth, end_date: endOfMonth }).then(res => res.data).catch(() => null);
+    },
+  });
+
   const transactions = transactionsData || [];
 
   const filteredTransactions = transactions.filter((t: any) => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     (t.merchant_name && t.merchant_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const displayIncome = summaryData ? summaryData.total_income : filteredTransactions.reduce((acc: number, t: any) => {
+    return t.transaction_type === "credit" ? acc + t.amount : acc;
+  }, 0);
+
+  const displayExpenses = summaryData ? summaryData.total_expenses : filteredTransactions.reduce((acc: number, t: any) => {
+    return t.transaction_type === "debit" ? acc + t.amount : acc;
+  }, 0);
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
@@ -114,14 +131,14 @@ export default function TransactionsPage() {
           <div className="text-sm text-slate-400 mb-1">Total Income (This Month)</div>
           <div className="text-2xl font-bold text-success-400 flex items-center gap-2">
             <ArrowUpRight className="w-5 h-5" />
-            ₹6,00,000.00
+            {formatCurrency(displayIncome)}
           </div>
         </div>
         <div className="glass-card p-5">
           <div className="text-sm text-slate-400 mb-1">Total Expenses (This Month)</div>
           <div className="text-2xl font-bold text-danger-400 flex items-center gap-2">
             <ArrowDownRight className="w-5 h-5" />
-            ₹3,86,416.00
+            {formatCurrency(displayExpenses)}
           </div>
         </div>
         <div className="glass-card p-5 relative overflow-hidden group">

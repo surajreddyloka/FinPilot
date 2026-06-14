@@ -1,0 +1,93 @@
+services:
+  # ── Backend Web Service (FastAPI) ───────────────────────────────────────────
+  - type: web
+    name: finpilot-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: finpilot-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: finpilot-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: finpilot-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: finpilot-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+
+  # ── Celery Background Worker ────────────────────────────────────────────────
+  - type: worker
+    name: finpilot-celery-worker
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    buildCommand: ""
+    startCommand: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: finpilot-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: finpilot-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: finpilot-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: finpilot-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: web
+          name: finpilot-backend
+          property: envVar:JWT_SECRET_KEY
+      - key: ENCRYPTION_KEY
+        fromService:
+          type: web
+          name: finpilot-backend
+          property: envVar:ENCRYPTION_KEY
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+
+# ── Databases ─────────────────────────────────────────────────────────────────
+database:
+  name: finpilot-postgres
+  databaseName: finpilot
+  user: postgres
+  plan: free
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+redis:
+  name: finpilot-redis
+  plan: free
+  ipAllowList: []

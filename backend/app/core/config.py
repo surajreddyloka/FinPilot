@@ -121,5 +121,12 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def convert_postgres_scheme(cls, v: str) -> str:
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
 
 settings = Settings()
