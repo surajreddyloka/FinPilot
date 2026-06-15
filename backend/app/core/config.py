@@ -32,6 +32,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:8000",
         "https://finpilot.ai",
+        "https://finpilot-frontend-suraj.netlify.app",
     ]
 
     # ── Database ─────────────────────────────────────────────────
