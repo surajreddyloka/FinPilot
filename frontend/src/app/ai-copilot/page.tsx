@@ -37,7 +37,7 @@ function ChartWidget({ chart }: { chart: Message["chart_data"] }) {
             <Pie data={chart.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} strokeWidth={0}>
               {chart.data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
             </Pie>
-            <Tooltip formatter={(v: number) => formatCurrency(v)} />
+            <Tooltip formatter={(v: any) => formatCurrency(v)} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px", color: "#94a3b8" }} />
           </PieChart>
         ) : chart.type === "bar" ? (
@@ -45,7 +45,7 @@ function ChartWidget({ chart }: { chart: Message["chart_data"] }) {
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
             <XAxis dataKey="category" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
-            <Tooltip formatter={(v: number) => formatCurrency(v)} />
+            <Tooltip formatter={(v: any) => formatCurrency(v)} />
             <Bar dataKey="recommended" fill="#6366f1" radius={[4, 4, 0, 0]} name="Recommended" />
             <Bar dataKey="current" fill="#d946ef" radius={[4, 4, 0, 0]} name="Current" />
           </BarChart>

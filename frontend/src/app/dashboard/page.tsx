@@ -306,15 +306,15 @@ export default function DashboardPage() {
                 outerRadius={80}
                 strokeWidth={0}
               >
-                {categories.map((entry, i) => (
+                {categories.map((entry: any, i: number) => (
                   <Cell key={i} fill={CATEGORY_COLORS[entry.name] || "#6366f1"} />
                 ))}
               </Pie>
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <Tooltip formatter={(v: any) => formatCurrency(v)} />
             </PieChart>
           </ResponsiveContainer>
           <div className="mt-3 space-y-2">
-            {categories.slice(0, 4).map((cat) => (
+            {categories.slice(0, 4).map((cat: any) => (
               <div key={cat.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ background: CATEGORY_COLORS[cat.name] || "#6366f1" }} />

@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value: any) => formatCurrency(value)}
                     contentStyle={{ backgroundColor: "#0f172a", borderColor: "rgba(255,255,255,0.1)", borderRadius: "8px" }}
                   />
                 </PieChart>
@@ -182,7 +182,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 100000}L`} />
               <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
+                formatter={(value: any) => formatCurrency(value)}
                 contentStyle={{ backgroundColor: "#0f172a", borderColor: "rgba(99, 102, 241, 0.3)", borderRadius: "8px" }}
               />
               <Line type="monotone" dataKey="actual" name="Actual Net Worth" stroke="#f8fafc" strokeWidth={3} dot={{ r: 4, fill: "#f8fafc" }} />

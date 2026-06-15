@@ -226,7 +226,9 @@ export default function TransactionsPage() {
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: catColor }} />
                         <span className="text-slate-300">{catName}</span>
                         {t.ai_category_confidence && t.ai_category_confidence > 0.9 && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-400 opacity-60" title={`AI Categorized (${t.ai_category_confidence*100}%)`} />
+                          <span title={`AI Categorized (${t.ai_category_confidence*100}%)`}>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-brand-400 opacity-60" />
+                          </span>
                         )}
                       </div>
                     </td>
