@@ -24,7 +24,11 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Overwrite the sqlalchemy.url from alembic.ini with the environment variable
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Alembic needs a sync driver (psycopg2), not asyncpg
+_db_url = settings.DATABASE_URL
+_db_url = _db_url.replace("postgresql+asyncpg://", "postgresql://")
+_db_url = _db_url.replace("postgres://", "postgresql://")  # Render uses postgres://
+config.set_main_option("sqlalchemy.url", _db_url)
 
 
 def run_migrations_offline() -> None:
