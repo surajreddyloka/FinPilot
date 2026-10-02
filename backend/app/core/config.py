@@ -34,6 +34,7 @@ class Settings(BaseSettings):
         "https://finpilot.ai",
         "https://finpilot-frontend-suraj.netlify.app",
         "https://finpilot-frontend.onrender.com",
+        "https://fin-pilot-rosy-omega.vercel.app",
     ]
 
     # ── Database ─────────────────────────────────────────────────
