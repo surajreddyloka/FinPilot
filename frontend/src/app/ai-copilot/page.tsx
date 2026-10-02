@@ -65,7 +65,7 @@ function ChartWidget({ chart }: { chart: Message["chart_data"] }) {
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, onSuggestionClick }: { message: Message, onSuggestionClick?: (text: string) => void }) {
   const isUser = message.role === "user";
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""} animate-slide-up`}>
@@ -83,7 +83,7 @@ function MessageBubble({ message }: { message: Message }) {
         {!isUser && message.suggestions && message.suggestions.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-1">
             {message.suggestions.map((s, i) => (
-              <button key={i} className="text-xs px-3 py-1.5 rounded-full bg-brand-500/15 text-brand-300 border border-brand-500/25 hover:bg-brand-500/25 transition-all">
+              <button key={i} onClick={() => onSuggestionClick?.(s)} className="text-xs px-3 py-1.5 rounded-full bg-brand-500/15 text-brand-300 border border-brand-500/25 hover:bg-brand-500/25 transition-all">
                 {s}
               </button>
             ))}
@@ -218,7 +218,7 @@ export default function AICopilotPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
+            <MessageBubble key={msg.id} message={msg} onSuggestionClick={handleSuggestion} />
           ))}
 
           {/* Loading indicator */}

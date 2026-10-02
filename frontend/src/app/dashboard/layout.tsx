@@ -5,6 +5,7 @@ import { useAuthStore } from "@/lib/store/auth-store";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Bell, Search } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 export default function DashboardLayout({
   children,
@@ -44,7 +45,7 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-3 ml-auto">
             {/* Notifications */}
-            <button className="relative p-2 rounded-xl bg-white/5 border border-white/[0.08] text-slate-400 hover:text-white hover:border-brand-500/30 transition-all">
+            <button onClick={() => toast("Notifications coming soon")} className="relative p-2 rounded-xl bg-white/5 border border-white/[0.08] text-slate-400 hover:text-white hover:border-brand-500/30 transition-all">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full"></span>
             </button>

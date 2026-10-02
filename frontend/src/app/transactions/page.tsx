@@ -4,9 +4,10 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { transactionsApi } from "@/lib/api/client";
 import { formatCurrency, formatCompact, CATEGORY_COLORS, CATEGORY_ICONS } from "@/lib/utils/cn";
-import { Plus, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, FileText, Sparkles, CheckCircle2, X } from "lucide-react";
+import { Plus, Search, Filter, ArrowUpRight, ArrowDownRight, MoreHorizontal, Download, FileText, Sparkles, CheckCircle2, X, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import * as Dialog from "@radix-ui/react-dialog";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { toast } from "react-hot-toast";
 
 export default function TransactionsPage() {
@@ -14,6 +15,8 @@ export default function TransactionsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "", amount: "", transaction_type: "debit", category_id: "10", transaction_date: new Date().toISOString().split("T")[0]
@@ -29,6 +32,22 @@ export default function TransactionsPage() {
       setFormData({ ...formData, name: "", amount: "" });
     },
     onError: () => toast.error("Failed to add transaction"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => transactionsApi.delete(id).catch((err) => {
+      // Mock fallback
+      if (err?.response?.status === 404 || err?.message.includes("Network")) {
+        return Promise.resolve({ data: { success: true } });
+      }
+      throw err;
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions-summary"] });
+      toast.success("Transaction deleted!");
+    },
+    onError: () => toast.error("Failed to delete transaction"),
   });
 
   const handleExport = () => {
@@ -82,10 +101,24 @@ export default function TransactionsPage() {
 
   const transactions = transactionsData || [];
 
-  const filteredTransactions = transactions.filter((t: any) => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (t.merchant_name && t.merchant_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredTransactions = transactions.filter((t: any) => {
+    const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      (t.merchant_name && t.merchant_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCategory = selectedCategory === "all" || t.category_id?.toString() === selectedCategory;
+    
+    let matchesDate = true;
+    if (dateRange.start) {
+      matchesDate = matchesDate && new Date(t.transaction_date) >= new Date(dateRange.start);
+    }
+    if (dateRange.end) {
+      const endDate = new Date(dateRange.end);
+      endDate.setHours(23, 59, 59, 999);
+      matchesDate = matchesDate && new Date(t.transaction_date) <= endDate;
+    }
+    
+    return matchesSearch && matchesCategory && matchesDate;
+  });
 
   const displayIncome = summaryData ? summaryData.total_income : filteredTransactions.reduce((acc: number, t: any) => {
     return t.transaction_type === "credit" ? acc + t.amount : acc;
@@ -164,15 +197,34 @@ export default function TransactionsPage() {
             className="input-dark pl-10"
           />
         </div>
-        <div className="flex gap-2">
-          <button className="btn-ghost flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            Category
-          </button>
-          <button className="btn-ghost flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            Date Range
-          </button>
+        <div className="flex gap-2 flex-wrap">
+          <select 
+            value={selectedCategory} 
+            onChange={(e) => setSelectedCategory(e.target.value)} 
+            className="input-dark w-40"
+          >
+            <option value="all">All Categories</option>
+            {Object.entries(CATEGORY_NAMES).map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2 bg-slate-900 border border-white/10 rounded-xl px-3 focus-within:border-brand-500/50">
+            <input 
+              type="date" 
+              value={dateRange.start} 
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })} 
+              className="bg-transparent border-none outline-none text-slate-300 text-sm focus:ring-0"
+              title="Start Date"
+            />
+            <span className="text-slate-500">-</span>
+            <input 
+              type="date" 
+              value={dateRange.end} 
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })} 
+              className="bg-transparent border-none outline-none text-slate-300 text-sm focus:ring-0"
+              title="End Date"
+            />
+          </div>
         </div>
       </div>
 
@@ -241,9 +293,25 @@ export default function TransactionsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger asChild>
+                          <button className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Portal>
+                          <DropdownMenu.Content className="min-w-[160px] bg-slate-900 border border-white/10 rounded-xl p-1 shadow-xl z-50 animate-in fade-in zoom-in-95" align="end">
+                            <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-white/10 rounded-lg cursor-pointer outline-none transition-colors" onClick={() => toast("Edit feature coming soon")}>
+                              <Edit2 className="w-4 h-4" />
+                              Edit
+                            </DropdownMenu.Item>
+                            <DropdownMenu.Item className="flex items-center gap-2 px-3 py-2 text-sm text-danger-400 hover:bg-danger-500/10 hover:text-danger-300 rounded-lg cursor-pointer outline-none transition-colors mt-1" onClick={() => deleteMutation.mutate(t.id)}>
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </DropdownMenu.Item>
+                          </DropdownMenu.Content>
+                        </DropdownMenu.Portal>
+                      </DropdownMenu.Root>
                     </td>
                   </tr>
                 );

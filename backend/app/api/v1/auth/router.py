@@ -12,6 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.api.dependencies import get_current_user
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -205,8 +206,8 @@ async def google_login(
             google_requests.Request(),
             settings.GOOGLE_CLIENT_ID
         )
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid Google authentication token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Google authentication token: {str(e)}")
 
     email = id_info.get("email")
     if not email:
@@ -230,9 +231,10 @@ async def google_login(
         if avatar:
             user.avatar_url = avatar
             db.add(user)
-            await db.commit()
 
         db.add(AuditLog(user_id=user.id, action="user.register_google", resource_type="user", resource_id=str(user.id)))
+        await db.commit()
+        await db.refresh(user)
     else:
         if not user.is_active:
             raise HTTPException(status_code=403, detail="Account is disabled")
@@ -291,20 +293,29 @@ async def refresh_token(
 @router.post("/mfa/setup", response_model=MFASetupResponse)
 async def setup_mfa(
     db: AsyncSession = Depends(get_db),
-    # current_user: User = Depends(get_current_user),  # commented for brevity
+    current_user: User = Depends(get_current_user),
 ):
     """Generate MFA secret and QR code."""
     secret = generate_mfa_secret()
-    qr_code = generate_mfa_qr_code(secret, "user@example.com")
+    qr_code = generate_mfa_qr_code(secret, current_user.email)
     from app.core.security import get_mfa_uri
-    uri = get_mfa_uri(secret, "user@example.com")
+    uri = get_mfa_uri(secret, current_user.email)
     return MFASetupResponse(secret=secret, qr_code_base64=qr_code, provisioning_uri=uri)
 
 
 @router.post("/mfa/verify")
-async def verify_mfa(request: MFAVerifyRequest):
+async def verify_mfa(
+    request: MFAVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Verify a TOTP token against the provided secret."""
     valid = verify_mfa_token(request.secret, request.token)
     if not valid:
         raise HTTPException(status_code=400, detail="Invalid MFA token")
+        
+    repo = UserRepository(db)
+    from app.core.security import encrypt_field
+    await repo.update(current_user.id, mfa_enabled=True, mfa_secret=encrypt_field(request.secret))
+    
     return {"verified": True, "message": "MFA token is valid"}

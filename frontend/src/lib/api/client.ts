@@ -82,6 +82,8 @@ export const transactionsApi = {
   list: (params?: Record<string, unknown>) =>
     api.get("/transactions", { params }),
   create: (data: Record<string, unknown>) => api.post("/transactions", data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/transactions/${id}`, data),
+  delete: (id: string) => api.delete(`/transactions/${id}`),
   summary: (params?: Record<string, unknown>) =>
     api.get("/transactions/summary", { params }),
   upload: (file: File) => {
