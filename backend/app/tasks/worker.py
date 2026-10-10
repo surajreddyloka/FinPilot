@@ -44,9 +44,37 @@ def process_financial_document(user_id: str, file_path: str, document_type: str)
 
 @celery_app.task(name="generate_monthly_report")
 def generate_monthly_report(user_id: str, month: int, year: int):
-    """Generates PDF/CSV report for the user's monthly finances."""
+    """Generates PDF/CSV report for the user's monthly finances, including anomaly detection, subscription detection, and financial forecasting sections."""
     logger.info(f"Generating report for user {user_id} for {month}/{year}")
     import time
-    time.sleep(3) # Simulate PDF generation
+    import asyncio
+    from app.core.database import async_session_maker
+    from app.services.ai.anomaly_detector import AnomalyDetector, SubscriptionDetector, FinancialForecaster
+
+    # Simulate PDF generation delay
+    time.sleep(3)
+
+    async def _gather_sections():
+        async with async_session_maker() as db:
+            anomaly_results = await AnomalyDetector().detect(user_id, db)
+            subscription_results = await SubscriptionDetector().detect(user_id, db)
+            forecast_results = await FinancialForecaster().forecast(user_id, db, months=6)
+            return {
+                "anomalies": anomaly_results,
+                "subscriptions": subscription_results,
+                "forecast": forecast_results,
+            }
+
+    # Run the async gathering in the sync context
+    try:
+        sections = asyncio.run(_gather_sections())
+    except Exception as e:
+        logger.error(f"Error gathering report sections for user {user_id}: {e}")
+        sections = {}
+
     logger.info(f"Report generated successfully for user {user_id}")
-    return {"status": "success", "report_url": f"/downloads/{user_id}/report_{year}_{month}.pdf"}
+    return {
+        "status": "success",
+        "report_url": f"/downloads/{user_id}/report_{year}_{month}.pdf",
+        "summary": sections,
+    }

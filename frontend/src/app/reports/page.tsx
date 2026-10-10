@@ -10,6 +10,13 @@ import { toast } from "react-hot-toast";
 
 type ReportType = "monthly_summary" | "tax_preparation" | "custom_export";
 
+// Map frontend report type labels → backend ReportType enum values
+const REPORT_TYPE_MAP: Record<ReportType, string> = {
+  monthly_summary: "monthly",
+  tax_preparation: "custom",
+  custom_export: "custom",
+};
+
 export default function ReportsPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,12 +36,50 @@ export default function ReportsPage() {
 
   const reports = reportsData || [];
 
-  // Generate report mutation
+  // Generate report mutation — maps frontend type to backend enum, falls back to client-side export
   const generateMutation = useMutation({
-    mutationFn: () => reportsApi.generate(selectedType),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reports"] });
-      toast.success("Report is being generated! It will appear below shortly.");
+    mutationFn: async () => {
+      const backendType = REPORT_TYPE_MAP[selectedType];
+      try {
+        return await reportsApi.generate(backendType);
+      } catch {
+        // Backend offline: do client-side CSV export as fallback
+        const [year, month] = selectedMonth.split("-").map(Number);
+        const start = startOfMonth(new Date(year, month - 1));
+        const end = endOfMonth(start);
+        let txData: any[] = [];
+        try {
+          const res = await transactionsApi.list({
+            limit: 1000,
+            start_date: start.toISOString(),
+            end_date: end.toISOString(),
+          });
+          txData = Array.isArray(res.data) ? res.data : res.data?.items || [];
+        } catch {
+          txData = [];
+        }
+        const headers = "Date,Name,Merchant,Category,Type,Amount,Currency\n";
+        const rows = txData.map((t: any) =>
+          `"${format(new Date(t.transaction_date), "yyyy-MM-dd")}","${t.name || ""}","${t.merchant_name || ""}","${t.category_id || ""}","${t.transaction_type}","${t.amount}","${t.currency || "INR"}"`
+        ).join("\n");
+        const blob = new Blob([headers + rows], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `finpilot_${selectedType}_${selectedMonth}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        // Return a sentinel so onSuccess fires
+        return { data: { offline: true } };
+      }
+    },
+    onSuccess: (res: any) => {
+      if (res?.data?.offline) {
+        toast.success("Report downloaded as CSV (offline mode).");
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["reports"] });
+        toast.success("Report is being generated! It will appear below shortly.");
+      }
       setIsModalOpen(false);
     },
     onError: () => toast.error("Failed to generate report. Please try again."),

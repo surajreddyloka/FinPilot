@@ -215,13 +215,18 @@ This month you've spent **${expenses:,.2f}** across {context.get('transaction_co
 
         elif any(w in msg_lower for w in ["save", "saving", "savings", "goal"]):
             monthly_savings = income - expenses
+            savings_msg = (
+                "🌟 Excellent! A savings rate above 20% puts you on a strong financial path."
+                if savings_rate > 20
+                else "📈 Financial experts recommend saving at least 20% of income. Here's how to get there:"
+            )
             text = f"""💰 **Your Savings Overview**
 
 - **Monthly Savings:** ${monthly_savings:,.2f}
 - **Savings Rate:** {savings_rate:.1f}%
 - **Active Goals:** {context.get('active_goals', 0)}
 
-{'🌟 Excellent! A savings rate above 20% puts you on a strong financial path.' if savings_rate > 20 else '📈 Financial experts recommend saving at least 20% of income. Here\'s how to get there:'}
+{savings_msg}
 
 **Quick Wins to Boost Savings:**
 1. Cancel unused subscriptions ({context.get('subscription_count', 0)} detected)

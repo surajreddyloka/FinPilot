@@ -19,7 +19,34 @@ export default function BudgetsPage() {
 
   const budgets = budgetsData || [];
   
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+   const [editBudget, setEditBudget] = useState<{ id: string; category: string; limit: string } | null>(null);
+   const editMutation = useMutation({
+     mutationFn: ({ id, data }: { id: string; data: any }) => budgetsApi.update(id, data),
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+       toast.success("Budget updated!");
+       setIsEditModalOpen(false);
+       setEditBudget(null);
+     },
+     onError: () => toast.error("Failed to update budget"),
+   });
+
+   const handleEditClick = (budget: any) => {
+     setEditBudget({ id: budget.id, category: budget.category, limit: budget.limit?.toString() ?? "" });
+     setIsEditModalOpen(true);
+   };
+
+   const handleEditSubmit = (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!editBudget) return;
+     if (!editBudget.limit) return toast.error("Please enter a limit");
+     editMutation.mutate({
+       id: editBudget.id,
+       data: { category: editBudget.category, limit: parseFloat(editBudget.limit) },
+     });
+   };
   const [formData, setFormData] = useState({ category: "Food & Dining", limit: "" });
 
   const createMutation = useMutation({
@@ -136,9 +163,9 @@ export default function BudgetsPage() {
                     <p className="text-xs text-slate-500">{percent.toFixed(0)}% Used</p>
                   </div>
                 </div>
-                <button onClick={() => toast("Edit Budget coming soon")} className="text-slate-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100">
-                  <Edit2 className="w-4 h-4" />
-                </button>
+          <button onClick={() => handleEditClick(budget)} className="text-slate-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100">
+            <Edit2 className="w-4 h-4" />
+          </button>
               </div>
 
               <div className="mb-4">
@@ -197,6 +224,58 @@ export default function BudgetsPage() {
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="btn-ghost flex-1">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="btn-gradient flex-1">
                   {createMutation.isPending ? "Creating..." : "Create Budget"}
+                </button>
+              </div>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Edit Budget Modal */}
+      <Dialog.Root open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-fade-in" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-slate-900 border border-white/10 p-6 rounded-2xl z-50 animate-slide-up shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <Dialog.Title className="text-xl font-bold text-white">Edit Budget</Dialog.Title>
+              <Dialog.Close className="text-slate-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </Dialog.Close>
+            </div>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Category</label>
+                <select
+                  value={editBudget?.category || ""}
+                  onChange={e => setEditBudget(prev => prev ? { ...prev, category: e.target.value } : prev)}
+                  className="input-dark w-full"
+                >
+                  <option value="Housing & Utilities">Housing & Utilities</option>
+                  <option value="Food & Dining">Food & Dining</option>
+                  <option value="Shopping">Shopping</option>
+                  <option value="Transportation">Transportation</option>
+                  <option value="Entertainment">Entertainment</option>
+                  <option value="Health & Fitness">Health & Fitness</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Monthly Limit (₹)</label>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  value={editBudget?.limit || ""}
+                  onChange={e => setEditBudget(prev => prev ? { ...prev, limit: e.target.value } : prev)}
+                  className="input-dark w-full"
+                  placeholder="5000"
+                />
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="btn-ghost flex-1">
+                  Cancel
+                </button>
+                <button type="submit" disabled={editMutation.isPending} className="btn-gradient flex-1">
+                  {editMutation.isPending ? "Updating..." : "Update Budget"}
                 </button>
               </div>
             </form>

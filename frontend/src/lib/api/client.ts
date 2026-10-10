@@ -98,7 +98,8 @@ export const transactionsApi = {
 // Budgets
 export const budgetsApi = {
   list: () => api.get("/budgets"),
-  create: (data: Record<string, unknown>) => api.post("/budgets", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/budgets/${id}`, data),
 };
 
 // Goals

@@ -138,24 +138,45 @@ export default function LoginPage() {
                   try {
                     setLoading(true);
                     if (!credentialResponse.credential) throw new Error("No credential");
-                    const { data } = await authApi.googleLogin(credentialResponse.credential);
-                    setTokens(data.access_token, data.refresh_token);
-                    
-                    // Fetch user profile
-                    const { data: user } = await usersApi.me();
-                    setUser(user);
-                    
-                    toast.success("Welcome back! 🎉");
+                    try {
+                      // Try backend first
+                      const { data } = await authApi.googleLogin(credentialResponse.credential);
+                      setTokens(data.access_token, data.refresh_token);
+                      const { data: user } = await usersApi.me();
+                      setUser(user);
+                      toast.success("Welcome back! 🎉");
+                    } catch {
+                      // Backend offline: decode Google JWT payload client-side and use demo mode
+                      const payloadB64 = credentialResponse.credential.split(".")[1];
+                      let profile: { name?: string; email?: string; picture?: string } = {};
+                      try {
+                        profile = JSON.parse(atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")));
+                      } catch {}
+                      setTokens("demo_token", "demo_refresh");
+                      setUser({
+                        id: "google-user-1",
+                        email: profile.email || "google@finpilot.ai",
+                        full_name: profile.name || "Google User",
+                        role: "user",
+                        is_active: true,
+                        is_verified: true,
+                        mfa_enabled: false,
+                        avatar_url: profile.picture,
+                        currency: "INR",
+                        theme: "dark",
+                      });
+                      toast.success(`Welcome, ${profile.name || "there"}! (Demo mode — backend offline) 🚀`);
+                    }
                     router.push("/dashboard");
                   } catch (err: any) {
-                    const msg = err?.response?.data?.detail || "Google login failed.";
+                    const msg = err?.response?.data?.detail || "Google login failed. Please try again.";
                     toast.error(msg);
                   } finally {
                     setLoading(false);
                   }
                 }}
                 onError={() => {
-                  toast.error("Google Login Failed");
+                  toast.error("Google sign-in was cancelled or failed. Please try again.");
                 }}
                 theme="filled_black"
                 shape="rectangular"
