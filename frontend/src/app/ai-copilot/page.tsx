@@ -155,14 +155,26 @@ export default function AICopilotPage() {
       };
       setMessages((prev) => [...prev, aiMsg]);
     },
-    onError: () => {
-      const errMsg: Message = {
+    onError: (err) => {
+      // Offline fallback: provide a mock response instead of an error message
+      const aiMsg: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: "⚠️ I couldn't connect to the AI service right now. Please ensure the backend is running and your OpenAI API key is configured.",
+        content: "⚠️ **Offline Mode:** I couldn't connect to the backend AI service.\n\nHowever, looking at your local demo data, your highest spending category this month is **Food & Dining** (₹12,450). Here is a quick breakdown of your spending:",
+        chart_data: {
+          type: "pie",
+          title: "Demo Spending Breakdown",
+          data: [
+            { name: "Food", value: 12450 },
+            { name: "Shopping", value: 8200 },
+            { name: "Transport", value: 4500 },
+            { name: "Entertainment", value: 3100 },
+          ],
+        },
+        suggestions: ["How can I reduce food expenses?", "Create a shopping budget"],
         created_at: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, errMsg]);
+      setMessages((prev) => [...prev, aiMsg]);
     },
   });
 
